@@ -35,16 +35,19 @@ impl<R: std::io::Read, W: std::io::Write> PngFilter<R, W> {
         self.writer.write_all(png_signature)?;
 
         let mut position: usize = 8;
-        while position < buffer.len() {
-            let chunk = Chunk::new(&buffer[position..]);
-            if chunk.is_critical() {
-                self.writer
-                    .write_all(&buffer[position..position + 8 + chunk.length as usize + 4])?;
-                if chunk.chunk_type == *b"IEND" {
-                    break;
+        while position + 12 <= buffer.len() {
+            if let Some(chunk) = Chunk::new(&buffer[position..]) {
+                if chunk.is_critical() {
+                    self.writer
+                        .write_all(&buffer[position..position + 8 + chunk.length as usize + 4])?;
+                    if chunk.chunk_type == *b"IEND" {
+                        break;
+                    }
                 }
+                position += 8 + chunk.length as usize + 4;
+            } else {
+                break;
             }
-            position += 8 + chunk.length as usize + 4;
         }
 
         Ok(())

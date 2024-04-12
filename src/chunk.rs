@@ -6,19 +6,29 @@ pub struct Chunk {
 }
 
 impl Chunk {
-    pub fn new(bytes: &[u8]) -> Self {
+    pub fn new(bytes: &[u8]) -> Option<Self> {
+        if bytes.len() < 12 {
+            // Not enough bytes for a valid chunk
+            return None;
+        }
+
         let length = u32::from_be_bytes(bytes[0..4].try_into().unwrap());
-        let chunk_type: [u8; 4] = bytes[4..8].try_into().unwrap();
+        let end_of_chunk = length as usize + 12;
+        if bytes.len() < end_of_chunk {
+            return None;
+        }
+
+        let chunk_type = bytes[4..8].try_into().unwrap();
         let data = bytes[8..8 + length as usize].to_vec();
         let crc_start = 8 + length as usize;
         let crc = u32::from_be_bytes(bytes[crc_start..crc_start + 4].try_into().unwrap());
 
-        Chunk {
+        Some(Chunk {
             length,
             chunk_type,
             data,
             crc,
-        }
+        })
     }
 
     pub fn is_critical(&self) -> bool {
